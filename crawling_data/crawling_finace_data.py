@@ -16,10 +16,21 @@ def crawling_finance_data():
 
     def make_csv(f_type, cmp_cd):
 
-        request_url = "https://value.choicestock.co.kr/finance/{}/{}".format(f_type, cmp_cd)
-        headers = {
-            'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36"}
-
+        request_url = "https://www.valueline.co.kr/finance/{}/{}".format(f_type, cmp_cd)
+        headers = \
+            {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+                , "Accept-Encoding": "gzip, deflate, br"
+                , "Cache-Control": "max-age=0"
+                , "Connection": "keep-alive"
+                , "Content-Length": "105"
+                , "Content-Type": "application/x-www-form-urlencoded"
+                , "Host": "www.valueline.co.kr"
+                , "Origin": "https://www.valueline.co.kr"
+                , "Referer": request_url
+                ,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+            }
         dimension = {
             "mrt": "ttm",
             "mry": "y",
@@ -121,7 +132,7 @@ def crawling_finance_data():
     ## 2. 종목 정보
     df_krx_info = fdr.StockListing("KRX")
 
-    df_krx_info = df_krx_info[df_krx_info["Market"].isin(["KOSPI", "KOSDAQ"])]
+    df_krx_info = df_krx_info[df_krx_info["Market"].isin(["KOSPI", "KOSDAQ", "KOSDAQ GLOBAL"])]
     # df_krx_info = df_krx_info[~df_krx_info["ListingDate"].isna()]
     df_krx_info = df_krx_info[~df_krx_info["Name"].str.contains("스팩")]
     df_krx_info = df_krx_info.sort_values("Code").reset_index(drop=True)
