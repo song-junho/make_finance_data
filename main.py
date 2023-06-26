@@ -5,10 +5,10 @@ from make_value_factor import MakeValueDB, MakeUpsideDB
 
 def main():
 
-    crawling_finance_data()
-    make_finance_db("q").create_db()
-    make_finance_db("y").create_db()
-    make_finance_db("ttm").create_db()
+    # crawling_finance_data()
+    # make_finance_db("q").create_db()
+    # make_finance_db("y").create_db()
+    # make_finance_db("ttm").create_db()
 
     MakeValueDB().run()
     MakeUpsideDB().run()

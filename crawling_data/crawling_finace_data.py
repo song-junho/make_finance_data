@@ -11,7 +11,7 @@ import FinanceDataReader as fdr
 import time
 import threading
 
-
+# 크롬 드라이버 버젼이 바뀌면 Header의 크롬 드라이버 버젼도 바껴야한다!!!! (2023.06.07)
 def crawling_finance_data():
 
     def make_csv(f_type, cmp_cd):
@@ -29,7 +29,7 @@ def crawling_finance_data():
                 , "Origin": "https://www.valueline.co.kr"
                 , "Referer": request_url
                 ,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
             }
         dimension = {
             "mrt": "ttm",
@@ -96,7 +96,7 @@ def crawling_finance_data():
                             list_err_cd.append(cmp_cd)
                             break
 
-    driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver_win32 (5)\chromedriver.exe')
+    driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver_win32 (7)\chromedriver.exe')
 
     user_id = "junho10000se"
     user_pw = "ghwnsthd!0212"
@@ -105,7 +105,8 @@ def crawling_finance_data():
     driver.get('http://naver.com')
 
     # 2. 로그인 버튼 클릭
-    elem = driver.find_element_by_class_name('link_login')
+    # elem = driver.find_element_by_class_name('link_login')
+    elem = driver.find_element_by_class_name('MyView-module__link_login___HpHMW')
     elem.click()
 
     # 3. ID 복사 붙여넣기

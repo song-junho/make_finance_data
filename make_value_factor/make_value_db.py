@@ -5,19 +5,15 @@ from selenium.webdriver.common.keys import Keys
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-import time
 import pickle
 import datetime
-from dateutil.relativedelta import relativedelta
-import FinanceDataReader as fdr
-from sqlalchemy import create_engine, Column, Integer, String, text
+from sqlalchemy import text
 
 from sqlalchemy import create_engine
 import pymysql
 
 import time
-import threading
-import multiprocessing
+from collections import deque
 import concurrent.futures
 
 
@@ -168,13 +164,12 @@ class MakeValueDB():
 
         }
 
-        list_df_res = []
+        list_df_res = deque([])
         list_err_cd = []
 
         for cmp_cd in tqdm(list_cmp_cd):
 
             try:
-                df_res = pd.DataFrame()
 
                 df_fin_ttm_tmp = self.df_fin_ttm[self.df_fin_ttm["cmp_cd"] == cmp_cd]
                 for item_cd in multiple_keys.keys():
@@ -213,13 +208,11 @@ class MakeValueDB():
 
                     df_merge = df_merge.loc[datetime.datetime(2000, 1, 1):][["cmp_cd", "item_cd", "val", "multiple"]]
 
-                    df_res = pd.concat([df_res, df_merge])
+                    list_df_res.append(df_merge)
 
             except:
                 list_err_cd.append(cmp_cd)
                 continue
-
-            list_df_res.append(df_res)
 
         return list_df_res
 
@@ -299,22 +292,8 @@ class MakeValueDB():
 
 
         # 멀티플 데이터 생성
-        list_tmp = []
-
-        df_tmp = pd.DataFrame()
-        for num in tqdm(range(0, len(list_df_res))):
-
-            df_tmp = pd.concat([df_tmp, list_df_res[num]])
-
-            if (num % 100 == 0) & (num != 0):
-                list_tmp.append(df_tmp)
-                df_tmp = pd.DataFrame()  # 초기화
-
-        list_tmp.append(df_tmp)
-
-        df_multiple = pd.DataFrame()
-        for num in tqdm(range(0, len(list_tmp))):
-            df_multiple = pd.concat([df_multiple, list_tmp[num]])
+        df_multiple = pd.concat(list_df_res)
+        del [[list_df_res]]
 
         df_multiple = df_multiple.reset_index()
         df_multiple = df_multiple.rename(columns={"index": "date"})
@@ -326,10 +305,6 @@ class MakeValueDB():
 
         df_multiple = df_multiple.sort_values(["cmp_cd", "item_cd", "date"])
         df_multiple = df_multiple.reset_index(drop=True)
-
-        # 메모리 해제
-        del [[list_tmp]]
-        del [[list_df_res]]
 
         # 기존 데이터 백업
         file_name = 'df_multiple_' + datetime.datetime.today().strftime("%Y%m%d")
