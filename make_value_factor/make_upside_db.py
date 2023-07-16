@@ -5,19 +5,16 @@ from selenium.webdriver.common.keys import Keys
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-import time
 import pickle
 import datetime
-from dateutil.relativedelta import relativedelta
-import FinanceDataReader as fdr
-from sqlalchemy import create_engine, Column, Integer, String, text
+
+from sqlalchemy import text
 
 from sqlalchemy import create_engine
 import pymysql
 
 import time
-import threading
-import multiprocessing
+from collections import deque
 import concurrent.futures
 import math
 
@@ -110,13 +107,11 @@ class MakeUpsideDB():
 
     def get_df_res_bulk(self, list_cmp_cd):
 
-        count = 0
-
+        list_df_res = deque([])
         df_res_bulk = pd.DataFrame()
         df_res = pd.DataFrame()
         for cmp_cd in tqdm(list_cmp_cd):
 
-            df_tmp = pd.DataFrame()
             for item_cd in range(900001, 900009):
 
                 for value_q in [0.25, 0.5, 0.75]:
@@ -126,17 +121,9 @@ class MakeUpsideDB():
                     df_stock = df_stock.rename(columns={"Date": "date"})
                     df_stock["value_q"] = value_q
 
-                    df_tmp = pd.concat([df_tmp, df_stock])
+                    list_df_res.append(df_stock)
 
-            df_res = pd.concat([df_res, df_tmp])
-
-            if (count % 100 == 0) & (count != 0):
-                df_res_bulk = pd.concat([df_res_bulk, df_res])
-                df_res = pd.DataFrame()  # 초기화
-
-            count += 1
-
-        df_res_bulk = pd.concat([df_res_bulk, df_res])
+        df_res_bulk = pd.concat(list_df_res)
         df_res_bulk["history_multiple"] = df_res_bulk["history_multiple"].fillna(0)
         df_res_bulk["upside"] = df_res_bulk["upside"].fillna(0)
 
