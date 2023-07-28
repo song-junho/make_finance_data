@@ -17,9 +17,7 @@ from collections import deque
 import concurrent.futures
 
 
-
 class MakeValueDB():
-
 
     def __init__(self):
         """
@@ -265,7 +263,7 @@ class MakeValueDB():
 
             list_df_res.append(df_res)
 
-        return list_df_res
+        return list_df_res,
 
     def run(self):
 
@@ -290,6 +288,9 @@ class MakeValueDB():
         end = time.time()
         print(end - start)
 
+        for i, data in enumerate(list_df_res):
+            if type(data) is not pd.DataFrame:
+                del list_df_res[i]
 
         # 멀티플 데이터 생성
         df_multiple = pd.concat(list_df_res)
@@ -340,6 +341,7 @@ class MakeValueDB():
             back_up = pickle.load(fr)
 
             with open(r'D:\MyProject\종목분석_환경\multiple_DB\백업\{}.pickle'.format(file_name), 'wb') as fw:
+
                 pickle.dump(back_up, fw)
                 del [back_up]
 
