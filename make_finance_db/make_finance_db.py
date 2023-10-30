@@ -34,17 +34,7 @@ class make_finance_db():
 
         self.df_fin_master = pd.read_sql_query('SELECT * FROM financial_data.finance_master', conn)
         self.df_mysql      = pd.read_sql_query('SELECT * FROM financial_data.{}'.format(self.table_nm), conn)
-
-        # krx 데이터 호출
-        df_krx_info = fdr.StockListing("KRX")
-        df_krx_info = df_krx_info[df_krx_info["Market"].isin(["KOSPI", "KOSDAQ", "KOSDAQ GLOBAL"])]
-        # df_krx_info = df_krx_info[~df_krx_info["ListingDate"].isna()]
-        df_krx_info = df_krx_info[~df_krx_info["Name"].str.contains("스팩")]
-        df_krx_info = df_krx_info.sort_values("Code").reset_index(drop=True)
-        df_krx_info = df_krx_info.rename(columns={"Code": "Symbol"})
-        df_krx_info = df_krx_info[~(df_krx_info["Symbol"].str[-1] != "0")].reset_index(drop=True)
-        # df_krx_info["mm"] = df_krx_info["SettleMonth"].dropna().str[:-1].astype("int32")
-        self.df_krx_info = df_krx_info
+        self.df_krx_info = pd.read_sql_query('SELECT * FROM financial_data.krx_stock_info', conn)
 
     # 손익계산서
     def get_df_income(self, cmp_cd, master_chk_val, dimension_val):
@@ -106,6 +96,9 @@ class make_finance_db():
             df_csv = df_csv[list(set(list_item_nm) & set(list_col))
 ]
             df_csv = df_csv.rename(columns={"매출액(수익)": "매출액"})
+            df_csv = df_csv[~(df_csv["매출액"] == "N/AN/A")]
+            print(cmp_cd)
+            df_csv = df_csv.astype("float")
 
             df_csv = df_csv[~(df_csv["매출액"] <= 0)]
             # 투자지표로 분류돼있으나, 손익계산서 내에서 진행
