@@ -1,20 +1,27 @@
 from selenium import webdriver
 import pyperclip
-import time
+import pymysql
 from selenium.webdriver.common.keys import Keys
 import pandas as pd
 from tqdm import tqdm
-import numpy as np
-import time
+from bs4 import BeautifulSoup
 import requests
-import FinanceDataReader as fdr
+from sqlalchemy import create_engine
 import time
 import threading
+import multiprocessing
 
 # 크롬 드라이버 버젼이 바뀌면 Header의 크롬 드라이버 버젼도 바껴야한다!!!! (2023.06.07)
-def crawling_finance_data():
+class CrawlingFinanceData():
 
-    def make_csv(f_type, cmp_cd):
+    def __init__(self):
+
+        self.list_err_cd = []
+
+        # 세션 상태
+        self.s = requests.Session()
+
+    def make_csv(self, f_type, cmp_cd):
 
         request_url = "https://www.valueline.co.kr/finance/{}/{}".format(f_type, cmp_cd)
         headers = \
@@ -29,7 +36,7 @@ def crawling_finance_data():
                 , "Origin": "https://www.valueline.co.kr"
                 , "Referer": request_url
                 ,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
             }
         dimension = {
             "mrt": "ttm",
@@ -60,15 +67,26 @@ def crawling_finance_data():
                     'view_chk': 'D',
                 }
 
-                r = s.post(request_url, data=payloads, headers=headers)
-                df = pd.read_html(r.text)[0]
+                r = self.s.post(request_url, data=payloads, headers=headers)
+                soup = BeautifulSoup(r.text, 'html.parser')
+                tables = soup.select('table')
+                table = tables[0]
+                table_html = str(table)
+
+                # 정수&실수 데이터 중복되므로 정수 데이터 제거
+                list_ess_data = table.find_all('span', {"class": "ess"})
+                for x in list_ess_data:
+                    table_html = table_html.replace(str(x), '')
+
+                df = pd.read_html(table_html)[0]
 
                 file_nm = "\\" + f_type + "_" + cmp_cd + "_" + str(master_chk_val) + "_" + dimension_val + ".csv"
                 file_nm = r"D:\MyProject\밸류라인_크롤링\엑셀_데이터" + file_nm
 
                 df.to_csv(file_nm, index=False)
 
-    def make_cmp_excel_data(list_cmp_cd):
+    def make_cmp_excel_data(self, list_cmp_cd, list_f_type):
+
         for cmp_cd in tqdm(list_cmp_cd):
 
             for f_type in list_f_type:
@@ -77,7 +95,7 @@ def crawling_finance_data():
 
                     count_broken = 0
                     try:
-                        make_csv(f_type, cmp_cd)
+                        self.make_csv(f_type, cmp_cd)
                         break
 
                     except Exception as e:
@@ -93,79 +111,88 @@ def crawling_finance_data():
                         else:
                             # Connection broken 에러가 아닌 케이스일 경우 에러 리스트로 저장
                             print(cmp_cd + " " + str(e))
-                            list_err_cd.append(cmp_cd)
+                            self.list_err_cd.append(cmp_cd)
                             break
 
-    driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver_win32 (7)\chromedriver.exe')
+    def run(self):
 
-    user_id = "junho10000se"
-    user_pw = "ghwnsthd!0212"
+        driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver_win32 (8)\chromedriver.exe')
 
-    # 1. 네이버 이동
-    driver.get('http://naver.com')
+        user_id = "junho10000se"
+        user_pw = "ghwnsthd!0212"
 
-    # 2. 로그인 버튼 클릭
-    # elem = driver.find_element_by_class_name('link_login')
-    elem = driver.find_element_by_class_name('MyView-module__link_login___HpHMW')
-    elem.click()
+        # 1. 네이버 이동
+        driver.get('http://naver.com')
 
-    # 3. ID 복사 붙여넣기
-    elem_id = driver.find_element_by_id('id')
-    elem_id.click()
-    pyperclip.copy(user_id)
-    elem_id.send_keys(Keys.CONTROL, 'v')
-    time.sleep(1)
+        # 2. 로그인 버튼 클릭
+        # elem = driver.find_element_by_class_name('link_login')
+        elem = driver.find_element_by_class_name('MyView-module__link_login___HpHMW')
+        elem.click()
 
-    # 4. PW 복사 붙여넣기
-    elem_id = driver.find_element_by_id('pw')
-    elem_id.click()
-    pyperclip.copy(user_pw)
-    elem_id.send_keys(Keys.CONTROL, 'v')
-    time.sleep(1)
+        # 3. ID 복사 붙여넣기
+        elem_id = driver.find_element_by_id('id')
+        elem_id.click()
+        pyperclip.copy(user_id)
+        elem_id.send_keys(Keys.CONTROL, 'v')
+        time.sleep(1)
 
-    # 5. 로그인 버튼 클릭
-    driver.find_element_by_id('log.login').click()
+        # 4. PW 복사 붙여넣기
+        elem_id = driver.find_element_by_id('pw')
+        elem_id.click()
+        pyperclip.copy(user_pw)
+        elem_id.send_keys(Keys.CONTROL, 'v')
+        time.sleep(1)
 
-    # 6. 밸류라인 이동 & 로그인 상태 세션
-    driver.get('https://value.choicestock.co.kr/member/login')
-    driver.find_elements_by_xpath('//*[@id="container"]/div/div[2]/ul/li[1]/a')[0].click()
+        # 5. 로그인 버튼 클릭
+        driver.find_element_by_id('log.login').click()
 
-    ## 2. 종목 정보
-    df_krx_info = fdr.StockListing("KRX")
+        # 6. 밸류라인 이동 & 로그인 상태 세션
+        driver.get('https://value.choicestock.co.kr/member/login')
+        driver.find_elements_by_xpath('//*[@id="container"]/div/div[2]/ul/li[1]/a')[0].click()
 
-    df_krx_info = df_krx_info[df_krx_info["Market"].isin(["KOSPI", "KOSDAQ", "KOSDAQ GLOBAL"])]
-    # df_krx_info = df_krx_info[~df_krx_info["ListingDate"].isna()]
-    df_krx_info = df_krx_info[~df_krx_info["Name"].str.contains("스팩")]
-    df_krx_info = df_krx_info.sort_values("Code").reset_index(drop=True)
-    df_krx_info = df_krx_info.rename(columns={"Code": "Symbol"})
-    df_krx_info = df_krx_info[~(df_krx_info["Symbol"].str[-1] != "0")].reset_index(drop=True)
+        ## 2. 종목 정보
+        pymysql.install_as_MySQLdb()
+        user_nm = "root"
+        user_pw = "ss019396"
 
-    # Selenium 세션 상태 가져오기
-    s = requests.Session()
+        host_nm = "127.0.0.1:3306"
+        engine = create_engine("mysql+mysqldb://" + user_nm + ":" + user_pw + "@" + host_nm)
 
-    for cookie in driver.get_cookies():
-        c = {cookie['name'] : cookie['value']}
-        s.cookies.update(c)
+        conn = engine.connect()
+        df_krx_info = pd.read_sql_query('SELECT * FROM financial_data.krx_stock_info', conn)
+
+        # Selenium 세션 상태 가져오기
+        self.s = requests.Session()
+
+        for cookie in driver.get_cookies():
+            c = {cookie['name'] : cookie['value']}
+            self.s.cookies.update(c)
 
 
-    list_f_type = ["income", "balancesheet", "investment"]
+        list_f_type = ["income", "balancesheet", "investment"]
 
-    list_err_cd = []
-    list_thread = []
-    #  전체 종목 100개 단위 분할, 약 23개 스레드
-    n = 100
-    list_cmp_cd_t = df_krx_info["Symbol"].to_list()
-    list_cmp_cd_t = [list_cmp_cd_t[i * n:(i + 1) * n] for i in range((len(list_cmp_cd_t) + n - 1) // n)]
+        list_err_cd = []
+        list_thread = []
+        #  전체 종목 100개 단위 분할, 약 23개 스레드
+        n = 10
+        list_cmp_cd_t = df_krx_info["Symbol"].to_list()
+        # list_cmp_cd_t=\
+        # [
+        #     '408920',
+        # ]
 
-    start = time.time()
+        list_cmp_cd_t = [list_cmp_cd_t[i * n:(i + 1) * n] for i in range((len(list_cmp_cd_t) + n - 1) // n)]
 
-    for list_cmp_cd in (list_cmp_cd_t):
-        t = threading.Thread(target=make_cmp_excel_data, args=(list_cmp_cd,))
-        t.start()
-        list_thread.append(t)
+        start = time.time()
 
-    for t in list_thread:
-        t.join()
+        for list_cmp_cd in list_cmp_cd_t:
+            t = multiprocessing.Process(target=self.make_cmp_excel_data, args=(list_cmp_cd, list_f_type))
+            t.start()
+            list_thread.append(t)
 
-    end = time.time()
-    print(end - start)
+        for t in list_thread:
+            t.join()
+
+        end = time.time()
+        print(end - start)
+
