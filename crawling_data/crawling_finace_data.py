@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 import time
 import threading
 import multiprocessing
+import random
 
 # 크롬 드라이버 버젼이 바뀌면 Header의 크롬 드라이버 버젼도 바껴야한다!!!! (2023.06.07)
 class CrawlingFinanceData():
@@ -36,7 +37,7 @@ class CrawlingFinanceData():
                 , "Origin": "https://www.valueline.co.kr"
                 , "Referer": request_url
                 ,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
             }
         dimension = {
             "mrt": "ttm",
@@ -88,9 +89,9 @@ class CrawlingFinanceData():
     def make_cmp_excel_data(self, list_cmp_cd, list_f_type):
 
         for cmp_cd in tqdm(list_cmp_cd):
-
+            time.sleep(random.uniform(0.5, 2))
             for f_type in list_f_type:
-
+                time.sleep(random.uniform(0.5, 2))
                 while True:
 
                     count_broken = 0
@@ -100,10 +101,11 @@ class CrawlingFinanceData():
 
                     except Exception as e:
 
-                        if str(e).find("Connection broken") > 0:
+                        if (str(e).find("Connection broken") > 0) or (str(e).find("Connection aborted") > 0):
                             # Connection broken 에러가 아닌 케이스 -> 재시도
                             print(cmp_cd + " " + str(e))
                             if count_broken < 10:
+                                time.sleep(random.uniform(0.5, 2))
                                 count_broken += 1
                             else:
                                 continue
@@ -116,7 +118,7 @@ class CrawlingFinanceData():
 
     def run(self):
 
-        driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver_win32 (8)\chromedriver.exe')
+        driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver-win32\chromedriver-win32\chromedriver.exe')
 
         user_id = "junho10000se"
         user_pw = "ghwnsthd!0212"
@@ -174,12 +176,8 @@ class CrawlingFinanceData():
         list_err_cd = []
         list_thread = []
         #  전체 종목 100개 단위 분할, 약 23개 스레드
-        n = 10
+        n = 400
         list_cmp_cd_t = df_krx_info["Symbol"].to_list()
-        # list_cmp_cd_t=\
-        # [
-        #     '408920',
-        # ]
 
         list_cmp_cd_t = [list_cmp_cd_t[i * n:(i + 1) * n] for i in range((len(list_cmp_cd_t) + n - 1) // n)]
 
