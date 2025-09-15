@@ -1,4 +1,7 @@
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service as ChromeService
 import pyperclip
 import pymysql
 from selenium.webdriver.common.keys import Keys
@@ -8,7 +11,7 @@ from bs4 import BeautifulSoup
 import requests
 from sqlalchemy import create_engine
 import time
-import threading
+from config import API_KEY
 import multiprocessing
 import random
 
@@ -37,7 +40,7 @@ class CrawlingFinanceData():
                 , "Origin": "https://www.valueline.co.kr"
                 , "Referer": request_url
                 ,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"
             }
         dimension = {
             "mrt": "ttm",
@@ -118,46 +121,50 @@ class CrawlingFinanceData():
 
     def run(self):
 
-        driver = webdriver.Chrome(r'C:\Users\송준호\Downloads\chromedriver-win32\chromedriver-win32\chromedriver.exe')
+        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
 
-        user_id = "junho10000se"
-        user_pw = "ghwnsthd!0212"
+        user_id = API_KEY["NAVER"]["ID"]
+        user_pw = API_KEY["NAVER"]["PW"]
 
         # 1. 네이버 이동
         driver.get('http://naver.com')
 
         # 2. 로그인 버튼 클릭
         # elem = driver.find_element_by_class_name('link_login')
-        elem = driver.find_element_by_class_name('MyView-module__link_login___HpHMW')
+        elem = driver.find_element(By.CLASS_NAME, 'MyView-module__link_login___HpHMW')
         elem.click()
 
         # 3. ID 복사 붙여넣기
-        elem_id = driver.find_element_by_id('id')
+        elem_id = driver.find_element(By.ID,'id')
         elem_id.click()
         pyperclip.copy(user_id)
         elem_id.send_keys(Keys.CONTROL, 'v')
         time.sleep(1)
 
         # 4. PW 복사 붙여넣기
-        elem_id = driver.find_element_by_id('pw')
+        elem_id = driver.find_element(By.ID,'pw')
         elem_id.click()
         pyperclip.copy(user_pw)
         elem_id.send_keys(Keys.CONTROL, 'v')
         time.sleep(1)
 
         # 5. 로그인 버튼 클릭
-        driver.find_element_by_id('log.login').click()
+        driver.find_element(By.ID,'log.login').click()
 
         # 6. 밸류라인 이동 & 로그인 상태 세션
         driver.get('https://value.choicestock.co.kr/member/login')
-        driver.find_elements_by_xpath('//*[@id="container"]/div/div[2]/ul/li[1]/a')[0].click()
+        try:
+            driver.find_elements(By.XPATH, '//*[@id="container"]/div/div[2]/ul/li[1]/a')[0].click()
+        except:
+            driver.get('https://value.choicestock.co.kr/member/login')
+            driver.find_elements(By.XPATH, '//*[@id="container"]/div/div[2]/ul/li[1]/a')[0].click()
 
         ## 2. 종목 정보
         pymysql.install_as_MySQLdb()
-        user_nm = "root"
-        user_pw = "ss019396"
+        user_nm = API_KEY["MYSQL"]["ID"]
+        user_pw = API_KEY["MYSQL"]["PW"]
 
-        host_nm = "127.0.0.1:3306"
+        host_nm = API_KEY["MYSQL"]["HOST"]
         engine = create_engine("mysql+mysqldb://" + user_nm + ":" + user_pw + "@" + host_nm)
 
         conn = engine.connect()
@@ -170,13 +177,12 @@ class CrawlingFinanceData():
             c = {cookie['name'] : cookie['value']}
             self.s.cookies.update(c)
 
-
         list_f_type = ["income", "balancesheet", "investment"]
 
         list_err_cd = []
         list_thread = []
         #  전체 종목 100개 단위 분할, 약 23개 스레드
-        n = 400
+        n = 200
         list_cmp_cd_t = df_krx_info["Symbol"].to_list()
 
         list_cmp_cd_t = [list_cmp_cd_t[i * n:(i + 1) * n] for i in range((len(list_cmp_cd_t) + n - 1) // n)]
