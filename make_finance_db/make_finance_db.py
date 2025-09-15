@@ -1,9 +1,7 @@
-
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
-import FinanceDataReader as fdr
-from sqlalchemy import create_engine
+from config import API_KEY
 import pymysql
 import datetime
 import pickle
@@ -21,10 +19,10 @@ class make_finance_db():
 
         pymysql.install_as_MySQLdb()
 
-        self.user_nm = "root"
-        self.user_pw = "ss019396"
+        self.user_nm = API_KEY["MYSQL"]["ID"]
+        self.user_pw = API_KEY["MYSQL"]["PW"]
 
-        self.host_nm = "127.0.0.1:3306"
+        self.host_nm = API_KEY["MYSQL"]["HOST"]
 
         engine = create_engine("mysql+mysqldb://" + self.user_nm + ":" + self.user_pw + "@" + self.host_nm)
 
@@ -97,7 +95,6 @@ class make_finance_db():
 ]
             df_csv = df_csv.rename(columns={"매출액(수익)": "매출액"})
             df_csv = df_csv[~(df_csv["매출액"] == "N/AN/A")]
-            print(cmp_cd)
             df_csv = df_csv.astype("float")
 
             df_csv = df_csv[~(df_csv["매출액"] <= 0)]
@@ -239,6 +236,7 @@ class make_finance_db():
         list_item_nm = []
         list_item_nm.append("주당순이익 EPS(원)")
         list_item_nm.append("주당순자산 BPS(원)")
+        list_item_nm.append("주당배당금 DPS(원)")
         list_item_nm.append("주당매출액 SPS(원)")
         list_item_nm.append("주당현금흐름 CPS(원)")
         list_item_nm.append("부채비율(%)")
@@ -252,6 +250,7 @@ class make_finance_db():
         df_csv = df_csv[list_item_nm]
         df_csv = df_csv.rename(columns={"주당순이익 EPS(원)": "EPS",
                                         "주당순자산 BPS(원)": "BPS",
+                                        "주당배당금 DPS(원)": "DPS",
                                         "주당매출액 SPS(원)": "SPS",
                                         "주당현금흐름 CPS(원)": "CFPS",
                                         "자기자본이익률 ROE(%)": "ROE",
@@ -312,6 +311,7 @@ class make_finance_db():
 
             a = np.array(df_tmp["change_val"], dtype=float)
             b = np.array(df_tmp["val"].shift(periods=periods).abs(), dtype=float)
+            b = [0.00001 if x == 0 else x for x in b]  # 0값 대체
 
             df_tmp["change_pct"] = (a / b) * 100
 

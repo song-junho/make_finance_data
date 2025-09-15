@@ -1,7 +1,4 @@
-from selenium import webdriver
-import pyperclip
-import time
-from selenium.webdriver.common.keys import Keys
+from config import API_KEY
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
@@ -30,10 +27,10 @@ class MakeUpsideDB():
 
         pymysql.install_as_MySQLdb()
 
-        self.user_nm = "root"
-        self.user_pw = "ss019396"
+        self.user_nm = API_KEY["MYSQL"]["ID"]
+        self.user_pw = API_KEY["MYSQL"]["PW"]
 
-        self.host_nm = "127.0.0.1:3306"
+        self.host_nm = API_KEY["MYSQL"]["HOST"]
 
         engine = create_engine("mysql+mysqldb://" + self.user_nm + ":" + self.user_pw + "@" + self.host_nm)
 
@@ -170,21 +167,6 @@ class MakeUpsideDB():
                 pickle.dump(df_backup, fw)
                 del [[df_backup]]
 
-        # save data
-        with open(r'D:\MyProject\종목분석_환경\multiple_DB\df_multiple_history.pickle', 'wb') as fw:
-            pickle.dump(df_res_bulk, fw)
-
-        # save data
-        with open(r'D:\MyProject\종목분석_환경\multiple_DB\dict_multiple_his_cmp_cd.pickle', 'rb') as fr:
-
-            dict_multiple_his_cmp_cd = pickle.load(fr)
-
-        # 1. key-value(cmp_cd)
-        dict_multiple_his_cmp_cd = {}
-
-        for cmp_cd in tqdm(df_res_bulk["cmp_cd"].unique()):
-            dict_multiple_his_cmp_cd[cmp_cd] = df_res_bulk[df_res_bulk["cmp_cd"] == cmp_cd]
-
         # 기존 데이터 백업
         file_name = 'dict_multiple_his_cmp_cd_' + datetime.datetime.today().strftime("%Y%m%d")
 
@@ -194,17 +176,6 @@ class MakeUpsideDB():
             with open(r'D:\MyProject\종목분석_환경\multiple_DB\백업\{}.pickle'.format(file_name), 'wb') as fw:
                 pickle.dump(df_backup, fw)
                 del [[df_backup]]
-
-        # save data
-        with open(r'D:\MyProject\종목분석_환경\multiple_DB\dict_multiple_his_cmp_cd.pickle', 'wb') as fw:
-            pickle.dump(dict_multiple_his_cmp_cd, fw)
-            del [dict_multiple_his_cmp_cd]
-
-        # 2. key-value(date)
-        dict_multiple_his_date = {}
-
-        for v_date in tqdm(pd.to_datetime(df_res_bulk["date"].unique())):
-            dict_multiple_his_date[v_date] = df_res_bulk[df_res_bulk["date"] == v_date]
 
         # 기존 데이터 백업
         file_name = 'dict_multiple_his_date_' + datetime.datetime.today().strftime("%Y%m%d")
@@ -217,6 +188,29 @@ class MakeUpsideDB():
                 del [[df_backup]]
 
         # save data
+        with open(r'D:\MyProject\종목분석_환경\multiple_DB\df_multiple_history.pickle', 'wb') as fw:
+            pickle.dump(df_res_bulk, fw)
+
+        # 1. key-value(cmp_cd)
+        dict_multiple_his_cmp_cd = {}
+
+        for cmp_cd in tqdm(df_res_bulk["cmp_cd"].unique()):
+            dict_multiple_his_cmp_cd[cmp_cd] = df_res_bulk[df_res_bulk["cmp_cd"] == cmp_cd]
+
+        # save data
+        with open(r'D:\MyProject\종목분석_환경\multiple_DB\dict_multiple_his_cmp_cd.pickle', 'wb') as fw:
+            pickle.dump(dict_multiple_his_cmp_cd, fw)
+            del [dict_multiple_his_cmp_cd]
+
+        # 2. key-value(date)
+        dict_multiple_his_date = {}
+
+        for v_date in tqdm(pd.to_datetime(df_res_bulk["date"].unique())):
+            dict_multiple_his_date[v_date] = df_res_bulk[df_res_bulk["date"] == v_date]
+
+        # save data
         with open(r'D:\MyProject\종목분석_환경\multiple_DB\dict_multiple_his_date.pickle', 'wb') as fw:
             pickle.dump(dict_multiple_his_date, fw)
             del [dict_multiple_his_date]
+
+        print("[END]|" + datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + "|" + self.__class__.__name__)

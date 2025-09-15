@@ -1,7 +1,4 @@
-from selenium import webdriver
-import pyperclip
-import time
-from selenium.webdriver.common.keys import Keys
+from config import API_KEY
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
@@ -26,10 +23,10 @@ class MakeValueDB():
 
         pymysql.install_as_MySQLdb()
 
-        self.user_nm = "root"
-        self.user_pw = "ss019396"
+        self.user_nm = API_KEY["MYSQL"]["ID"]
+        self.user_pw = API_KEY["MYSQL"]["PW"]
 
-        self.host_nm = "127.0.0.1:3306"
+        self.host_nm = API_KEY["MYSQL"]["HOST"]
 
         engine = create_engine("mysql+mysqldb://" + self.user_nm + ":" + self.user_pw + "@" + self.host_nm)
 
@@ -363,3 +360,5 @@ class MakeValueDB():
         # save data
         with open(r'D:\MyProject\종목분석_환경\multiple_DB\dict_multiple_date.pickle', 'wb') as fw:
             pickle.dump(dict_multiple_date, fw)
+
+        print("[END]|" + datetime.datetime.today().strftime("%Y-%m-%d %H:%M:%S") + "|" + self.__class__.__name__)
